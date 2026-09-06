@@ -1,0 +1,161 @@
+import React from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  StatusBar,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
+import { useCommunityStore } from '../store/useCommunityStore';
+import { ResourceMetadataForm } from '../components/ResourceMetadataForm';
+
+export const UploadNoteDetailsScreen: React.FC = () => {
+  const router = useRouter();
+  const { uploadDraft, setUploadDraft } = useCommunityStore();
+
+  const handleNext = () => {
+    router.push('/community/upload/preview' as any);
+  };
+
+  return (
+    <View style={styles.root}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+
+      <SafeAreaView edges={['top']} style={styles.safeTop}>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+            <Feather name="arrow-left" size={20} color="#0F172A" />
+          </TouchableOpacity>
+          <View style={styles.headerTitleBox}>
+            <Text style={styles.headerTitle}>Resource Details</Text>
+            <Text style={styles.headerSub}>Step 2 of 3: Metadata</Text>
+          </View>
+          <View style={{ width: 36 }} />
+        </View>
+      </SafeAreaView>
+
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Step Indicator */}
+        <View style={styles.stepBar}>
+          <View style={styles.stepItem}>
+            <Text style={styles.stepNumDone}>✓</Text>
+            <Text style={styles.stepLabel}>File</Text>
+          </View>
+          <View style={[styles.stepLine, styles.stepLineDone]} />
+          <View style={[styles.stepItem, styles.stepActive]}>
+            <Text style={styles.stepNumActive}>2</Text>
+            <Text style={styles.stepLabelActive}>Details</Text>
+          </View>
+          <View style={styles.stepLine} />
+          <View style={styles.stepItem}>
+            <Text style={styles.stepNum}>3</Text>
+            <Text style={styles.stepLabel}>Preview</Text>
+          </View>
+        </View>
+
+        <ResourceMetadataForm
+          formData={uploadDraft}
+          onChangeData={(data) => setUploadDraft(data)}
+        />
+      </ScrollView>
+
+      <View style={styles.footer}>
+        <TouchableOpacity activeOpacity={0.85} style={styles.nextBtn} onPress={handleNext}>
+          <Text style={styles.nextBtnText}>Continue to Preview</Text>
+          <Feather name="arrow-right" size={16} color="#FFFFFF" />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: '#F8FAFC' },
+  safeTop: { backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitleBox: { alignItems: 'center' },
+  headerTitle: { fontSize: 17, fontWeight: '800', color: '#0F172A' },
+  headerSub: { fontSize: 11, color: '#64748B', marginTop: 1 },
+  scrollContent: { padding: 16 },
+  stepBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+    gap: 8,
+  },
+  stepItem: { alignItems: 'center', opacity: 0.5 },
+  stepActive: { opacity: 1 },
+  stepNum: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#E2E8F0',
+    textAlign: 'center',
+    lineHeight: 26,
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#475569',
+  },
+  stepNumDone: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#059669',
+    textAlign: 'center',
+    lineHeight: 26,
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  stepNumActive: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#7C3AED',
+    textAlign: 'center',
+    lineHeight: 26,
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  stepLabel: { fontSize: 10, color: '#64748B', marginTop: 2 },
+  stepLabelActive: { fontSize: 10, fontWeight: '800', color: '#7C3AED', marginTop: 2 },
+  stepLine: { width: 30, height: 2, backgroundColor: '#E2E8F0' },
+  stepLineDone: { backgroundColor: '#059669' },
+  footer: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+  },
+  nextBtn: {
+    backgroundColor: '#7C3AED',
+    borderRadius: 14,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  nextBtnText: { color: '#FFFFFF', fontSize: 15, fontWeight: '800' },
+});

@@ -1,0 +1,34 @@
+# node_modules
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+
+# Native build / credentials
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# Environment variables
+.env
+.env*.local
+
+# TypeScript generated
+expo-env.d.ts
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
