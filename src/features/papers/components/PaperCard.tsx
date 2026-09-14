@@ -59,6 +59,24 @@ export const PaperCard: React.FC<PaperCardProps> = ({
         {/* Paper Details */}
         <View style={styles.infoWrapper}>
           <View style={styles.tagsRow}>
+            {/* Mode Tag */}
+            <View
+              style={[
+                styles.paperTypeTag,
+                { backgroundColor: paper.contentType === 'PDF_UPLOAD' ? '#FFF7ED' : '#F3E8FF' },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.paperTypeText,
+                  { color: paper.contentType === 'PDF_UPLOAD' ? '#C2410C' : '#7E22CE' },
+                ]}
+              >
+                {paper.contentType === 'PDF_UPLOAD' ? '📄 PDF' : '📝 Digital'}
+              </Text>
+            </View>
+            <Text style={styles.metaDot}>•</Text>
+
             {/* Paper Type Tag */}
             <View style={[styles.paperTypeTag, { backgroundColor: badgeStyle.bg }]}>
               <Text style={[styles.paperTypeText, { color: badgeStyle.text }]}>

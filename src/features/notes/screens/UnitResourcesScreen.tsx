@@ -82,6 +82,17 @@ export const UnitResourcesScreen: React.FC = () => {
                       <Text style={styles.typeBadgeText}>{res.type}</Text>
                     </View>
                     <Text style={styles.fileFormatText}>{res.fileFormat} • {res.fileSize}</Text>
+                    {res.isPaid ? (
+                      <View style={styles.listPaidBadge}>
+                        <Feather name="lock" size={10} color="#D97706" />
+                        <Text style={styles.listPaidBadgeText}>Paid • ₹{res.price || 19}</Text>
+                      </View>
+                    ) : (
+                      <View style={styles.listFreeBadge}>
+                        <Feather name="gift" size={10} color="#059669" />
+                        <Text style={styles.listFreeBadgeText}>Free</Text>
+                      </View>
+                    )}
                   </View>
                   <Text style={styles.resourceTitle}>{res.title}</Text>
                 </View>
@@ -229,6 +240,34 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#64748B',
     fontWeight: '600',
+  },
+  listPaidBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    gap: 3,
+  },
+  listPaidBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#D97706',
+  },
+  listFreeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#D1FAE5',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    gap: 3,
+  },
+  listFreeBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#059669',
   },
   resourceTitle: {
     fontSize: 15,

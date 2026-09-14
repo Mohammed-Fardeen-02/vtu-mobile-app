@@ -27,6 +27,7 @@ export const PaperPreviewModal: React.FC<PaperPreviewModalProps> = ({
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [zoomScale, setZoomScale] = useState(1);
+  const [showSolutionKey, setShowSolutionKey] = useState(false);
   const { bookmarkedIds, downloadedIds, toggleBookmark } = usePaperStore();
 
   if (!paper) return null;
@@ -87,7 +88,7 @@ export const PaperPreviewModal: React.FC<PaperPreviewModalProps> = ({
           </View>
         </View>
 
-        {/* Floating Zoom & Toolbar Controls */}
+        {/* Toolbar with Zoom, Page & Solution Toggle */}
         <View style={styles.zoomControlBar}>
           <TouchableOpacity onPress={handleZoomOut} style={styles.zoomBtn}>
             <Feather name="minus" size={16} color="#0F172A" />
@@ -102,6 +103,31 @@ export const PaperPreviewModal: React.FC<PaperPreviewModalProps> = ({
           <Text style={styles.pageIndicatorText}>
             Page {currentPage} of {totalPages}
           </Text>
+
+          {/* Solution Toggle Button */}
+          {paper.hasSolutionKey && (
+            <TouchableOpacity
+              onPress={() => setShowSolutionKey(!showSolutionKey)}
+              style={[
+                styles.solutionToggleBtn,
+                showSolutionKey && styles.solutionToggleBtnActive,
+              ]}
+            >
+              <Feather
+                name={showSolutionKey ? 'check-circle' : 'file-text'}
+                size={14}
+                color={showSolutionKey ? '#FFFFFF' : '#7E22CE'}
+              />
+              <Text
+                style={[
+                  styles.solutionToggleText,
+                  showSolutionKey && styles.solutionToggleTextActive,
+                ]}
+              >
+                {showSolutionKey ? 'Key Active' : 'Solutions'}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Paper Canvas View */}
@@ -137,8 +163,8 @@ export const PaperPreviewModal: React.FC<PaperPreviewModalProps> = ({
               </Text>
 
               <View style={styles.timeMarksRow}>
-                <Text style={styles.timeMarksText}>Time: 3 hrs.</Text>
-                <Text style={styles.timeMarksText}>Max. Marks: 100</Text>
+                <Text style={styles.timeMarksText}>Time: {paper.durationHours || 3} hrs.</Text>
+                <Text style={styles.timeMarksText}>Max. Marks: {paper.maxMarks || 100}</Text>
               </View>
 
               <View style={styles.dividerLine} />
@@ -158,22 +184,79 @@ export const PaperPreviewModal: React.FC<PaperPreviewModalProps> = ({
                     <Text style={styles.moduleTitleText}>{mod.title}</Text>
                   </View>
 
-                  {mod.questions.map((q, idx) => (
-                    <View key={idx} style={styles.questionItem}>
-                      <View style={styles.qNumCol}>
-                        <Text style={styles.qNumText}>{q.questionNumber}</Text>
+                  {/* Main Questions with Choices or Simple list */}
+                  {mod.mainQuestions && mod.mainQuestions.length > 0 ? (
+                    mod.mainQuestions.map((mq) => (
+                      <View key={mq.questionNumber} style={{ gap: 8 }}>
+                        {mq.choices.map((choice) => (
+                          <View key={choice.choiceId} style={{ gap: 6 }}>
+                            {choice.isOrOption && (
+                              <View style={styles.orDividerRow}>
+                                <View style={styles.orLine} />
+                                <Text style={styles.orText}>OR</Text>
+                                <View style={styles.orLine} />
+                              </View>
+                            )}
+                            {choice.subQuestions.map((sub) => (
+                              <View key={sub.subCode} style={styles.questionItem}>
+                                <View style={styles.qNumCol}>
+                                  <Text style={styles.qNumText}>
+                                    {choice.choiceId} ({sub.subCode})
+                                  </Text>
+                                </View>
+                                <View style={styles.qTextCol}>
+                                  <Text style={styles.qText}>{sub.text}</Text>
+
+                                  {/* Inline Faculty Verified Solution */}
+                                  {showSolutionKey && sub.solution && (
+                                    <View style={styles.solutionBox}>
+                                      <Text style={styles.solutionHeader}>
+                                        ✓ Verified Solution Key:
+                                      </Text>
+                                      <Text style={styles.solutionText}>
+                                        {sub.solution}
+                                      </Text>
+                                    </View>
+                                  )}
+                                </View>
+                                <View style={styles.qMarksCol}>
+                                  <Text style={styles.qMarksText}>({sub.marks} Marks)</Text>
+                                  {sub.bloomLevel && (
+                                    <Text style={styles.qBloomText}>[{sub.bloomLevel}]</Text>
+                                  )}
+                                </View>
+                              </View>
+                            ))}
+                          </View>
+                        ))}
                       </View>
-                      <View style={styles.qTextCol}>
-                        <Text style={styles.qText}>{q.questionText}</Text>
+                    ))
+                  ) : (
+                    mod.questions?.map((q, idx) => (
+                      <View key={idx} style={styles.questionItem}>
+                        <View style={styles.qNumCol}>
+                          <Text style={styles.qNumText}>{q.questionNumber}</Text>
+                        </View>
+                        <View style={styles.qTextCol}>
+                          <Text style={styles.qText}>{q.questionText}</Text>
+                          {showSolutionKey && q.solution && (
+                            <View style={styles.solutionBox}>
+                              <Text style={styles.solutionHeader}>
+                                ✓ Verified Solution Key:
+                              </Text>
+                              <Text style={styles.solutionText}>{q.solution}</Text>
+                            </View>
+                          )}
+                        </View>
+                        <View style={styles.qMarksCol}>
+                          <Text style={styles.qMarksText}>({q.marks} Marks)</Text>
+                          {q.bloomLevel && (
+                            <Text style={styles.qBloomText}>[{q.bloomLevel}]</Text>
+                          )}
+                        </View>
                       </View>
-                      <View style={styles.qMarksCol}>
-                        <Text style={styles.qMarksText}>({q.marks} Marks)</Text>
-                        {q.bloomLevel && (
-                          <Text style={styles.qBloomText}>[{q.bloomLevel}]</Text>
-                        )}
-                      </View>
-                    </View>
-                  ))}
+                    ))
+                  )}
                 </View>
               ))}
             </View>
@@ -273,7 +356,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    gap: 12,
+    gap: 10,
     elevation: 1,
   },
   zoomBtn: {
@@ -282,10 +365,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#F1F5F9',
   },
   zoomText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     color: '#0F172A',
-    minWidth: 42,
+    minWidth: 38,
     textAlign: 'center',
   },
   verticalDivider: {
@@ -294,9 +377,30 @@ const styles = StyleSheet.create({
     backgroundColor: '#CBD5E1',
   },
   pageIndicatorText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     color: '#475569',
+  },
+  solutionToggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#F3E8FF',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginLeft: 4,
+  },
+  solutionToggleBtnActive: {
+    backgroundColor: '#059669',
+  },
+  solutionToggleText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#7E22CE',
+  },
+  solutionToggleTextActive: {
+    color: '#FFFFFF',
   },
   canvasScroll: {
     flex: 1,
@@ -430,13 +534,31 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#0F172A',
   },
+  orDividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 6,
+    gap: 8,
+  },
+  orLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#CBD5E1',
+  },
+  orText: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: '#64748B',
+    letterSpacing: 1,
+  },
   questionItem: {
     flexDirection: 'row',
     marginVertical: 6,
     gap: 8,
   },
   qNumCol: {
-    width: 50,
+    width: 60,
   },
   qNumText: {
     fontSize: 12,
@@ -450,6 +572,25 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#1E293B',
     lineHeight: 18,
+  },
+  solutionBox: {
+    marginTop: 6,
+    padding: 8,
+    borderRadius: 6,
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+  },
+  solutionHeader: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#047857',
+    marginBottom: 2,
+  },
+  solutionText: {
+    fontSize: 11,
+    color: '#065F46',
+    lineHeight: 15,
   },
   qMarksCol: {
     alignItems: 'flex-end',

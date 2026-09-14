@@ -139,7 +139,7 @@ export const PaperDetailScreen: React.FC = () => {
               <View style={styles.moduleOutlineTextCol}>
                 <Text style={styles.moduleTitle}>{mod.title}</Text>
                 <Text style={styles.questionCountText}>
-                  {mod.questions.length} Exam Questions Included
+                  {mod.questions ? mod.questions.length : (mod.mainQuestions ? mod.mainQuestions.length : 0)} Exam Questions Included
                 </Text>
               </View>
             </View>

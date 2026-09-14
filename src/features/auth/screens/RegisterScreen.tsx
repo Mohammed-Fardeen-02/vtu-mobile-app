@@ -9,64 +9,95 @@ import {
   KeyboardAvoidingView,
   Platform,
   StatusBar,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { Feather } from '@expo/vector-icons';
-import { registerSchema, RegisterFormData } from '../validation/auth.schema';
-import { useAuthStore } from '@/store';
+import { performGoogleSignInSession } from '../utils/googleAuth';
+import { useAuth } from '../hooks/useAuth';
+import { useAuthStore } from '@/store/useAuthStore';
+import { manualRegisterSchema } from '../validation/auth.schema';
 
 export const RegisterScreen: React.FC = () => {
   const router = useRouter();
-  const setAuth = useAuthStore((state) => state.setAuth);
-  const [step, setStep] = useState<number>(1);
+  const { register: registerUser, loginWithGoogle, error, isLoading, clearError } = useAuth();
 
-  const {
-    control,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<RegisterFormData>({
-    resolver: zodResolver(registerSchema),
-    defaultValues: {
-      name: 'Fardeen',
-      email: 'youremail@gmail.com',
-      password: 'password123',
-      usn: '1CS21CS001',
-      branch: 'CSE',
-      scheme: '2022',
-    },
-  });
+  // Manual Form State
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
-  const handleBackStep = () => {
-    if (step > 1) {
-      setStep(step - 1);
-    } else {
-      router.back();
+  // Field Level Errors
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  const handleBack = () => {
+    clearError();
+    setFieldErrors({});
+    router.back();
+  };
+
+  // Google Sign-up / Continue with Google (DIRECT SIGN IN / REGISTER)
+  const handleGoogleSignup = async () => {
+    clearError();
+    setFieldErrors({});
+    const { idToken, cancelled } = await performGoogleSignInSession();
+    if (cancelled || !idToken) return;
+
+    const ok = await loginWithGoogle(idToken);
+    if (ok) {
+      const currentUser = useAuthStore.getState().user;
+      if (currentUser?.usn && (currentUser?.branch || currentUser?.branchCode)) {
+        router.replace('/(tabs)/home');
+      } else {
+        router.replace('/(auth)/onboarding');
+      }
     }
   };
 
-  const onSubmit = (data: RegisterFormData) => {
-    if (step < 3) {
-      setStep(step + 1);
+  // Manual Form Submission
+  const handleRegister = async () => {
+    clearError();
+    setFieldErrors({});
+
+    // Validate Input Fields using Zod
+    const result = manualRegisterSchema.safeParse({
+      name,
+      email,
+      password,
+      confirmPassword,
+    });
+
+    if (!result.success) {
+      const errors: Record<string, string> = {};
+      result.error.issues.forEach((issue) => {
+        if (issue.path[0]) {
+          errors[issue.path[0] as string] = issue.message;
+        }
+      });
+      setFieldErrors(errors);
       return;
     }
 
-    setAuth(
-      {
-        id: '1',
-        name: data.name,
-        email: data.email,
-        usn: data.usn,
-        branch: data.branch,
-        scheme: data.scheme,
-      },
-      'mock_token_123'
-    );
-    router.replace('/(tabs)/home');
+    // Submit Registration Payload to Backend (Only clean properties accepted by RegisterDto)
+    const ok = await registerUser({
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
+      password,
+    });
+
+    if (ok) {
+      const currentUser = useAuthStore.getState().user;
+      if (currentUser?.usn && (currentUser?.branch || currentUser?.branchCode)) {
+        router.replace('/(tabs)/home');
+      } else {
+        router.replace('/(auth)/onboarding');
+      }
+    }
   };
 
   return (
@@ -93,37 +124,21 @@ export const RegisterScreen: React.FC = () => {
               <TouchableOpacity
                 activeOpacity={0.7}
                 style={styles.backButton}
-                onPress={handleBackStep}
+                onPress={handleBack}
               >
                 <Feather name="chevron-left" size={22} color="#FFFFFF" />
               </TouchableOpacity>
 
-              {/* Stepper Indicator */}
-              <View style={styles.stepperContainer}>
-                <View style={styles.stepperRow}>
-                  <View style={[styles.stepCircle, step >= 1 && styles.activeStepCircle]}>
-                    <Text style={[styles.stepNumber, step >= 1 && styles.activeStepNumber]}>1</Text>
-                  </View>
-                  <View style={[styles.stepLine, step >= 2 && styles.activeStepLine]} />
-                  <View style={[styles.stepCircle, step >= 2 && styles.activeStepCircle]}>
-                    <Text style={[styles.stepNumber, step >= 2 && styles.activeStepNumber]}>2</Text>
-                  </View>
-                  <View style={[styles.stepLine, step >= 3 && styles.activeStepLine]} />
-                  <View style={[styles.stepCircle, step >= 3 && styles.activeStepCircle]}>
-                    <Text style={[styles.stepNumber, step >= 3 && styles.activeStepNumber]}>3</Text>
-                  </View>
-                </View>
-
-                <View style={styles.labelsRow}>
-                  <Text style={[styles.stepLabel, step >= 1 && styles.activeStepLabel]}>Personal Info</Text>
-                  <Text style={[styles.stepLabel, step >= 2 && styles.activeStepLabel]}>Academic Info</Text>
-                  <Text style={[styles.stepLabel, step >= 3 && styles.activeStepLabel]}>Complete</Text>
-                </View>
+              <View style={styles.headerTextContainer}>
+                <Text style={styles.headerTitle}>Create Account 🚀</Text>
+                <Text style={styles.headerSubtitle}>
+                  Register to access VTU syllabus, notes & CGPA calculator.
+                </Text>
               </View>
             </SafeAreaView>
           </LinearGradient>
 
-          {/* Bottom Curved White Sheet */}
+          {/* Bottom Sheet Card */}
           <View style={styles.whiteSheet}>
             {/* Center Logo */}
             <View style={styles.logoWrapper}>
@@ -134,186 +149,145 @@ export const RegisterScreen: React.FC = () => {
               />
             </View>
 
-            {/* Headline & Subtitle */}
-            <Text style={styles.title}>Let's Get Started! 🚀</Text>
-            <Text style={styles.subtitle}>
-              Create your account to unlock a world of learning.
-            </Text>
+            {/* Global API Error Banner */}
+            {error ? (
+              <View style={styles.apiErrorBanner}>
+                <Feather name="alert-circle" size={16} color="#DC2626" />
+                <Text style={styles.apiErrorText}>{error}</Text>
+              </View>
+            ) : null}
 
-            {/* Form Section Header */}
-            <Text style={styles.sectionHeader}>
-              {step === 1 ? 'Personal Information' : step === 2 ? 'Academic Details' : 'Finalize Profile'}
-            </Text>
-
-            {/* Form Inputs */}
+            {/* Form Container */}
             <View style={styles.formGroup}>
-              {step === 1 && (
-                <>
-                  {/* Full Name */}
-                  <View style={styles.inputContainer}>
-                    <Text style={styles.fieldLabel}>Full Name</Text>
-                    <Controller
-                      control={control}
-                      name="name"
-                      render={({ field: { onChange, value } }) => (
-                        <View style={styles.inputBox}>
-                          <Feather name="user" size={18} color="#64748B" style={styles.inputIcon} />
-                          <TextInput
-                            style={styles.input}
-                            placeholder="Fardeen"
-                            placeholderTextColor="#94A3B8"
-                            value={value}
-                            onChangeText={onChange}
-                          />
-                        </View>
-                      )}
-                    />
-                    {errors.name && <Text style={styles.errorText}>{errors.name.message}</Text>}
-                  </View>
-
-                  {/* Email Address */}
-                  <View style={styles.inputContainer}>
-                    <Text style={styles.fieldLabel}>Email Address</Text>
-                    <Controller
-                      control={control}
-                      name="email"
-                      render={({ field: { onChange, value } }) => (
-                        <View style={styles.inputBox}>
-                          <Feather name="mail" size={18} color="#64748B" style={styles.inputIcon} />
-                          <TextInput
-                            style={styles.input}
-                            placeholder="youremail@gmail.com"
-                            placeholderTextColor="#94A3B8"
-                            value={value}
-                            onChangeText={onChange}
-                            keyboardType="email-address"
-                            autoCapitalize="none"
-                          />
-                        </View>
-                      )}
-                    />
-                    {errors.email && <Text style={styles.errorText}>{errors.email.message}</Text>}
-                  </View>
-
-                  {/* Mobile Number */}
-                  <View style={styles.inputContainer}>
-                    <Text style={styles.fieldLabel}>Mobile Number</Text>
-                    <View style={styles.inputBox}>
-                      <Feather name="phone" size={18} color="#64748B" style={styles.inputIcon} />
-                      <TextInput
-                        style={styles.input}
-                        placeholder="+91 98765 43210"
-                        placeholderTextColor="#94A3B8"
-                        keyboardType="phone-pad"
-                      />
-                    </View>
-                  </View>
-
-                  {/* Date of Birth */}
-                  <View style={styles.inputContainer}>
-                    <Text style={styles.fieldLabel}>Date of Birth</Text>
-                    <View style={styles.inputBox}>
-                      <Feather name="calendar" size={18} color="#64748B" style={styles.inputIcon} />
-                      <TextInput
-                        style={styles.input}
-                        placeholder="DD / MM / YYYY"
-                        placeholderTextColor="#94A3B8"
-                      />
-                      <Feather name="calendar" size={18} color="#94A3B8" />
-                    </View>
-                  </View>
-                </>
-              )}
-
-              {step === 2 && (
-                <>
-                  {/* USN Number */}
-                  <View style={styles.inputContainer}>
-                    <Text style={styles.fieldLabel}>USN Number</Text>
-                    <Controller
-                      control={control}
-                      name="usn"
-                      render={({ field: { onChange, value } }) => (
-                        <View style={styles.inputBox}>
-                          <Feather name="credit-card" size={18} color="#64748B" style={styles.inputIcon} />
-                          <TextInput
-                            style={styles.input}
-                            placeholder="1CS21CS001"
-                            placeholderTextColor="#94A3B8"
-                            value={value}
-                            onChangeText={onChange}
-                            autoCapitalize="characters"
-                          />
-                        </View>
-                      )}
-                    />
-                  </View>
-
-                  {/* Branch */}
-                  <View style={styles.inputContainer}>
-                    <Text style={styles.fieldLabel}>Engineering Branch</Text>
-                    <Controller
-                      control={control}
-                      name="branch"
-                      render={({ field: { onChange, value } }) => (
-                        <View style={styles.inputBox}>
-                          <Feather name="book-open" size={18} color="#64748B" style={styles.inputIcon} />
-                          <TextInput
-                            style={styles.input}
-                            placeholder="Computer Science & Engg (CSE)"
-                            placeholderTextColor="#94A3B8"
-                            value={value}
-                            onChangeText={onChange}
-                          />
-                        </View>
-                      )}
-                    />
-                  </View>
-                </>
-              )}
-
-              {step === 3 && (
-                <>
-                  {/* Password */}
-                  <View style={styles.inputContainer}>
-                    <Text style={styles.fieldLabel}>Set Password</Text>
-                    <Controller
-                      control={control}
-                      name="password"
-                      render={({ field: { onChange, value } }) => (
-                        <View style={styles.inputBox}>
-                          <Feather name="lock" size={18} color="#64748B" style={styles.inputIcon} />
-                          <TextInput
-                            style={styles.input}
-                            placeholder="••••••••"
-                            placeholderTextColor="#94A3B8"
-                            value={value}
-                            onChangeText={onChange}
-                            secureTextEntry
-                          />
-                        </View>
-                      )}
-                    />
-                  </View>
-                </>
-              )}
-
-              {/* Continue Action Button */}
+              {/* Option to Continue with Google */}
               <TouchableOpacity
                 activeOpacity={0.85}
-                style={styles.continueButton}
-                onPress={handleSubmit(onSubmit)}
+                style={styles.googleButton}
+                onPress={handleGoogleSignup}
+                disabled={isLoading}
               >
-                <Text style={styles.continueText}>
-                  {step === 3 ? 'Complete Registration' : 'Continue'}
+                <Text style={styles.googleG}>G </Text>
+                <Text style={styles.googleText}>
+                  {isLoading ? 'Connecting to Google...' : 'Continue with Google'}
                 </Text>
               </TouchableOpacity>
 
-              {/* Already have an account footer */}
+              {/* OR Divider */}
+              <View style={styles.dividerRow}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>or register with email</Text>
+                <View style={styles.dividerLine} />
+              </View>
+
+              {/* Full Name Input */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.fieldLabel}>Full Name *</Text>
+                <View style={[styles.inputBox, !!fieldErrors.name && styles.inputBoxError]}>
+                  <Feather name="user" size={18} color="#64748B" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="e.g. Rahul Sharma"
+                    placeholderTextColor="#94A3B8"
+                    value={name}
+                    onChangeText={(txt) => {
+                      setName(txt);
+                      if (fieldErrors.name) setFieldErrors((prev) => ({ ...prev, name: '' }));
+                    }}
+                  />
+                </View>
+                {fieldErrors.name ? <Text style={styles.errorText}>{fieldErrors.name}</Text> : null}
+              </View>
+
+              {/* Email Address Input */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.fieldLabel}>Email Address *</Text>
+                <View style={[styles.inputBox, !!fieldErrors.email && styles.inputBoxError]}>
+                  <Feather name="mail" size={18} color="#64748B" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="student@gmail.com"
+                    placeholderTextColor="#94A3B8"
+                    value={email}
+                    onChangeText={(txt) => {
+                      setEmail(txt);
+                      if (fieldErrors.email) setFieldErrors((prev) => ({ ...prev, email: '' }));
+                    }}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                  />
+                </View>
+                {fieldErrors.email ? <Text style={styles.errorText}>{fieldErrors.email}</Text> : null}
+              </View>
+
+              {/* Password Input */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.fieldLabel}>Password *</Text>
+                <View style={[styles.inputBox, !!fieldErrors.password && styles.inputBoxError]}>
+                  <Feather name="lock" size={18} color="#64748B" style={styles.inputIcon} />
+                  <TextInput
+                    style={[styles.input, { paddingRight: 40 }]}
+                    placeholder="Minimum 8 characters"
+                    placeholderTextColor="#94A3B8"
+                    value={password}
+                    onChangeText={(txt) => {
+                      setPassword(txt);
+                      if (fieldErrors.password) setFieldErrors((prev) => ({ ...prev, password: '' }));
+                    }}
+                    secureTextEntry={!showPassword}
+                  />
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    style={styles.eyeButton}
+                    onPress={() => setShowPassword(!showPassword)}
+                  >
+                    <Feather name={showPassword ? 'eye-off' : 'eye'} size={18} color="#64748B" />
+                  </TouchableOpacity>
+                </View>
+                {fieldErrors.password ? <Text style={styles.errorText}>{fieldErrors.password}</Text> : null}
+              </View>
+
+              {/* Confirm Password Input */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.fieldLabel}>Confirm Password *</Text>
+                <View style={[styles.inputBox, !!fieldErrors.confirmPassword && styles.inputBoxError]}>
+                  <Feather name="lock" size={18} color="#64748B" style={styles.inputIcon} />
+                  <TextInput
+                    style={[styles.input, { paddingRight: 40 }]}
+                    placeholder="Re-enter password"
+                    placeholderTextColor="#94A3B8"
+                    value={confirmPassword}
+                    onChangeText={(txt) => {
+                      setConfirmPassword(txt);
+                      if (fieldErrors.confirmPassword)
+                        setFieldErrors((prev) => ({ ...prev, confirmPassword: '' }));
+                    }}
+                    secureTextEntry={!showPassword}
+                  />
+                </View>
+                {fieldErrors.confirmPassword ? (
+                  <Text style={styles.errorText}>{fieldErrors.confirmPassword}</Text>
+                ) : null}
+              </View>
+
+              {/* Submit Registration Button */}
+              <TouchableOpacity
+                activeOpacity={0.85}
+                style={styles.continueButton}
+                onPress={handleRegister}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Text style={styles.continueText}>Create Account</Text>
+                )}
+              </TouchableOpacity>
+
+              {/* Footer Link back to Login */}
               <View style={styles.footerRow}>
                 <Text style={styles.footerNotice}>Already have an account? </Text>
                 <TouchableOpacity onPress={() => router.push('/(auth)/login')}>
-                  <Text style={styles.loginLink}>Login</Text>
+                  <Text style={styles.loginLink}>Sign In</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -334,7 +308,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   topHeader: {
-    paddingBottom: 32,
+    paddingBottom: 36,
     paddingHorizontal: 20,
   },
   headerSafeArea: {
@@ -350,159 +324,169 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 12,
   },
-  stepperContainer: {
+  headerTextContainer: {
     marginTop: 4,
-    marginBottom: 4,
   },
-  stepperRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+  headerTitle: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: '#FFFFFF',
     marginBottom: 6,
   },
-  stepCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  activeStepCircle: {
-    backgroundColor: '#FFFFFF',
-  },
-  stepNumber: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: 'rgba(255, 255, 255, 0.9)',
-  },
-  activeStepNumber: {
-    color: '#0745E8',
-  },
-  stepLine: {
-    width: 50,
-    height: 2.5,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
-  },
-  activeStepLine: {
-    backgroundColor: '#FFFFFF',
-  },
-  labelsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 6,
-    marginTop: 4,
-  },
-  stepLabel: {
-    fontSize: 11,
-    color: 'rgba(255, 255, 255, 0.7)',
-    fontWeight: '600',
-  },
-  activeStepLabel: {
-    color: '#FFFFFF',
-    fontWeight: '700',
+  headerSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.85)',
+    lineHeight: 20,
   },
   whiteSheet: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    marginTop: -20,
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 32,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    marginTop: -18,
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 40,
   },
   logoWrapper: {
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 16,
   },
   logoImage: {
-    width: 70,
-    height: 70,
+    width: 60,
+    height: 60,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#0F172A',
-    textAlign: 'center',
-    marginBottom: 4,
+  apiErrorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEE2E2',
+    borderColor: '#FCA5A5',
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+    marginBottom: 16,
   },
-  subtitle: {
+  apiErrorText: {
+    color: '#991B1B',
     fontSize: 13,
-    color: '#64748B',
-    textAlign: 'center',
-    marginBottom: 18,
-  },
-  sectionHeader: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#0F172A',
-    marginBottom: 12,
+    fontWeight: '500',
+    marginLeft: 8,
+    flex: 1,
   },
   formGroup: {
-    gap: 14,
+    marginTop: 4,
+  },
+  googleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    borderRadius: 14,
+    paddingVertical: 14,
+    marginBottom: 18,
+  },
+  googleG: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#EA4335',
+  },
+  googleText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1E293B',
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#E2E8F0',
+  },
+  dividerText: {
+    marginHorizontal: 12,
+    fontSize: 13,
+    color: '#94A3B8',
+    fontWeight: '500',
   },
   inputContainer: {
-    gap: 5,
+    marginBottom: 16,
   },
   fieldLabel: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
     color: '#334155',
+    marginBottom: 6,
   },
   inputBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E2E8F0',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1.5,
-    borderRadius: 14,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
     paddingHorizontal: 14,
-    height: 48,
+    height: 50,
+  },
+  inputBoxError: {
+    borderColor: '#EF4444',
+    backgroundColor: '#FEF2F2',
   },
   inputIcon: {
     marginRight: 10,
   },
   input: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 15,
     color: '#0F172A',
+  },
+  eyeButton: {
+    position: 'absolute',
+    right: 14,
+    padding: 6,
   },
   errorText: {
     color: '#EF4444',
     fontSize: 12,
+    fontWeight: '500',
+    marginTop: 4,
   },
   continueButton: {
-    backgroundColor: '#0745E8',
-    paddingVertical: 15,
-    borderRadius: 16,
+    backgroundColor: '#0953E8',
+    borderRadius: 14,
+    paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#0745E8',
+    marginTop: 10,
+    marginBottom: 20,
+    shadowColor: '#0953E8',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.25,
     shadowRadius: 8,
     elevation: 4,
-    marginTop: 6,
   },
   continueText: {
-    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
+    color: '#FFFFFF',
   },
   footerRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 6,
   },
   footerNotice: {
-    fontSize: 13,
+    fontSize: 14,
     color: '#64748B',
   },
   loginLink: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
-    color: '#0745E8',
+    color: '#0953E8',
   },
 });

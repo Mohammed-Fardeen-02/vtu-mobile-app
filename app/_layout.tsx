@@ -4,15 +4,20 @@ import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { AppProvider } from '@/core/providers/AppProvider';
 import { colors } from '@/core/theme';
+import { useAuthStore } from '@/store';
 
 // Prevent default auto hide so we control transition smoothly
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
+  const initAuth = useAuthStore((state) => state.initAuth);
+
   useEffect(() => {
+    initAuth();
     // Hide native splash screen immediately on mount
     SplashScreen.hideAsync().catch(() => {});
-  }, []);
+  }, [initAuth]);
+
 
   return (
     <AppProvider>

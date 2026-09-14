@@ -5,7 +5,7 @@ import { colors } from '@/core/theme';
 interface DocumentThumbnailProps {
   subjectCode: string;
   scheme: string;
-  paperType: 'Regular' | 'Makeup' | 'Model';
+  paperType: string;
   pageCount: number;
   bgAccent?: string;
   size?: 'small' | 'medium' | 'large';

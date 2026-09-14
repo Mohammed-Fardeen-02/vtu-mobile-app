@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,19 +7,70 @@ import {
   TouchableOpacity,
   TextInput,
   FlatList,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useAuthStore } from '@/store';
+import { useToast } from '@/core/providers/ToastProvider';
 import { MOCK_SUBJECTS, MOCK_RESOURCES } from '../api/notesData';
+import { fetchNotesFromApi, fetchSubjectsFromApi } from '../api/notesApi';
+import { Subject, NoteResource } from '../types/notes.types';
 
 export const NotesListScreen: React.FC = () => {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
+  const { showToast } = useToast();
   const [activeFilter, setActiveFilter] = useState('All');
+  const [notes, setNotes] = useState<NoteResource[]>([]);
+  const [subjects, setSubjects] = useState<Subject[]>(MOCK_SUBJECTS);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const filters = ['All', 'Notes', 'Papers', 'Handwritten', 'Revision'];
+
+  const loadData = useCallback(async (isManualRefresh = false) => {
+    try {
+      const [fetchedNotes, fetchedSubjects] = await Promise.all([
+        fetchNotesFromApi({
+          semester: user?.semester || 5,
+          branchCode: user?.branch || 'CSE',
+          schemeYear: user?.scheme || '2022',
+        }),
+        fetchSubjectsFromApi({
+          semester: user?.semester || 5,
+          branchCode: user?.branch || 'CSE',
+          schemeYear: user?.scheme || '2022',
+        }),
+      ]);
+
+      setNotes(fetchedNotes);
+      setSubjects(fetchedSubjects.length > 0 ? fetchedSubjects : MOCK_SUBJECTS);
+      if (isManualRefresh) {
+        showToast('Library resources synced with server', 'success');
+      }
+    } catch {
+      setNotes(MOCK_RESOURCES);
+      setSubjects(MOCK_SUBJECTS);
+      if (isManualRefresh) {
+        showToast('Offline mode: Using cached notes', 'info');
+      }
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  }, [user, showToast]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const onRefresh = () => {
+    setIsRefreshing(true);
+    loadData(true);
+  };
 
   return (
     <View style={styles.rootContainer}>
@@ -46,7 +97,13 @@ export const NotesListScreen: React.FC = () => {
         </View>
       </SafeAreaView>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={['#0745E8']} />
+        }
+      >
         {/* Search Bar */}
         <TouchableOpacity
           activeOpacity={0.9}
@@ -95,120 +152,149 @@ export const NotesListScreen: React.FC = () => {
           ))}
         </ScrollView>
 
-        {/* Continue Studying Card */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Continue Studying</Text>
-        </View>
-        <TouchableOpacity
-          activeOpacity={0.85}
-          style={styles.continueCard}
-          onPress={() => router.push('/notes/r1?view=reader')}
-        >
-          <View style={styles.continueHeader}>
-            <View style={styles.continueIconBox}>
-              <Feather name="book-open" size={20} color="#0745E8" />
-            </View>
-            <View style={styles.continueInfo}>
-              <Text style={styles.continueSubject}>Computer Networks (21CS52)</Text>
-              <Text style={styles.continueUnit}>Module 1 • Application Layer</Text>
-            </View>
-            <Text style={styles.continuePercent}>68%</Text>
+        {isLoading ? (
+          <View style={{ padding: 40, alignItems: 'center' }}>
+            <ActivityIndicator size="large" color="#0745E8" />
+            <Text style={{ marginTop: 12, color: '#64748B', fontSize: 13 }}>Loading notes from server...</Text>
           </View>
-          <View style={styles.progressTrack}>
-            <View style={[styles.progressFill, { width: '68%' }]} />
-          </View>
-        </TouchableOpacity>
-
-        {/* Recent Subjects Section */}
-        {activeFilter === 'All' && (
+        ) : (
           <>
+            {/* Continue Studying Card */}
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Sem 5 Subjects ({MOCK_SUBJECTS.length})</Text>
-              <TouchableOpacity onPress={() => router.push('/notes/subjects' as any)}>
-                <Text style={styles.viewAllText}>View All</Text>
-              </TouchableOpacity>
+              <Text style={styles.sectionTitle}>Continue Studying</Text>
             </View>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              style={styles.continueCard}
+              onPress={() => router.push(`/notes/${notes[0]?.id || 'r1'}?view=reader` as any)}
+            >
+              <View style={styles.continueHeader}>
+                <View style={styles.continueIconBox}>
+                  <Feather name="book-open" size={20} color="#0745E8" />
+                </View>
+                <View style={styles.continueInfo}>
+                  <Text style={styles.continueSubject}>{notes[0]?.title || 'Computer Networks (21CS52)'}</Text>
+                  <Text style={styles.continueUnit}>{notes[0]?.subjectCode || 'Module 1'} • Active Study</Text>
+                </View>
+                <Text style={styles.continuePercent}>68%</Text>
+              </View>
+              <View style={styles.progressTrack}>
+                <View style={[styles.progressFill, { width: '68%' }]} />
+              </View>
+            </TouchableOpacity>
 
-            <View style={styles.subjectsList}>
-              {MOCK_SUBJECTS.map((subject) => (
-                <TouchableOpacity
-                  key={subject.id}
-                  activeOpacity={0.8}
-                  style={styles.subjectCard}
-                  onPress={() => router.push(`/notes/subject/${subject.id}` as any)}
-                >
-                  <View style={[styles.subjectIconBox, { backgroundColor: subject.iconBg }]}>
-                    <Feather name={subject.iconName as any} size={22} color={subject.iconColor} />
-                  </View>
-                  <View style={styles.subjectInfo}>
-                    <View style={styles.subjectCodeRow}>
-                      <Text style={styles.subjectCode}>{subject.code}</Text>
-                      <Text style={styles.resourceMeta}>{subject.resourceCount} Resources</Text>
-                    </View>
-                    <Text style={styles.subjectName}>{subject.name}</Text>
-                    <View style={styles.miniProgressRow}>
-                      <View style={styles.miniProgressTrack}>
-                        <View style={[styles.miniProgressFill, { width: `${subject.progress}%` }]} />
+            {/* Recent Subjects Section */}
+            {activeFilter === 'All' && (
+              <>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>Sem {user?.semester || 5} Subjects ({subjects.length})</Text>
+                  <TouchableOpacity onPress={() => router.push('/notes/subjects' as any)}>
+                    <Text style={styles.viewAllText}>View All</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.subjectsList}>
+                  {subjects.map((subject) => (
+                    <TouchableOpacity
+                      key={subject.id}
+                      activeOpacity={0.8}
+                      style={styles.subjectCard}
+                      onPress={() => router.push(`/notes/subject/${subject.id}` as any)}
+                    >
+                      <View style={[styles.subjectIconBox, { backgroundColor: subject.iconBg || '#EEF2FF' }]}>
+                        <Feather name={(subject.iconName as any) || 'book-open'} size={22} color={subject.iconColor || '#0745E8'} />
                       </View>
-                      <Text style={styles.progressNum}>{subject.progress}%</Text>
-                    </View>
+                      <View style={styles.subjectInfo}>
+                        <View style={styles.subjectCodeRow}>
+                          <Text style={styles.subjectCode}>{subject.code}</Text>
+                          <Text style={styles.resourceMeta}>{subject.resourceCount} Resources</Text>
+                        </View>
+                        <Text style={styles.subjectName}>{subject.name}</Text>
+                        <View style={styles.miniProgressRow}>
+                          <View style={styles.miniProgressTrack}>
+                            <View style={[styles.miniProgressFill, { width: `${subject.progress}%` }]} />
+                          </View>
+                          <Text style={styles.progressNum}>{subject.progress}%</Text>
+                        </View>
+                      </View>
+                      <Feather name="chevron-right" size={20} color="#94A3B8" />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </>
+            )}
+
+            {/* Resources Section (Filtered by activeFilter) */}
+            {(() => {
+              const filteredResources = notes.filter((res) => {
+                const titleLower = (res.title || '').toLowerCase();
+                const typeStr = res.type || '';
+                if (activeFilter === 'All') return true;
+                if (activeFilter === 'Notes') return (typeStr.includes('Notes') || typeStr.includes('Typed')) && !typeStr.includes('Handwritten') && !typeStr.includes('Revision') && !typeStr.includes('Short');
+                if (activeFilter === 'Papers') return typeStr.includes('Paper') || titleLower.includes('paper') || titleLower.includes('question') || titleLower.includes('qp');
+                if (activeFilter === 'Handwritten') return typeStr.includes('Handwritten') || titleLower.includes('handwritten');
+                if (activeFilter === 'Revision') return typeStr.includes('Revision') || typeStr.includes('Short') || titleLower.includes('revision') || titleLower.includes('formula');
+                return true;
+              });
+
+              const titleText = activeFilter === 'All'
+                ? 'Recently Uploaded Resources'
+                : `${activeFilter} Resources (${filteredResources.length})`;
+
+              return (
+                <>
+                  <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>{titleText}</Text>
                   </View>
-                  <Feather name="chevron-right" size={20} color="#94A3B8" />
-                </TouchableOpacity>
-              ))}
-            </View>
+
+                  <View style={styles.resourcesList}>
+                    {filteredResources.length === 0 ? (
+                      <View style={{ padding: 20, alignItems: 'center' }}>
+                        <Text style={{ color: '#64748B', fontSize: 13 }}>No {activeFilter} resources available yet.</Text>
+                      </View>
+                    ) : (
+                      filteredResources.map((resource) => (
+                        <TouchableOpacity
+                          key={resource.id}
+                          activeOpacity={0.8}
+                          style={styles.resourceCard}
+                          onPress={() => router.push(`/notes/${resource.id}?view=reader` as any)}
+                        >
+                          <View style={styles.resourceIconBox}>
+                            <Feather name="file-text" size={20} color="#EF4444" />
+                          </View>
+                          <View style={styles.resourceInfo}>
+                            <View style={styles.resourceHeaderRow}>
+                              <Text style={styles.resourceSubjectTag}>
+                                {resource.subjectCode} • {resource.type}
+                              </Text>
+                              {resource.isPaid ? (
+                                <View style={styles.listPaidBadge}>
+                                  <Feather name="lock" size={10} color="#D97706" />
+                                  <Text style={styles.listPaidBadgeText}>Paid • ₹{resource.price || 19}</Text>
+                                </View>
+                              ) : (
+                                <View style={styles.listFreeBadge}>
+                                  <Feather name="gift" size={10} color="#059669" />
+                                  <Text style={styles.listFreeBadgeText}>Free</Text>
+                                </View>
+                              )}
+                            </View>
+                            <Text style={styles.resourceTitle}>{resource.title}</Text>
+                            <Text style={styles.resourceMetaText}>
+                              {resource.fileSize} • {resource.downloadsCount} downloads {resource.totalPages ? `• ${resource.totalPages} Pgs` : ''}
+                            </Text>
+                          </View>
+                          <Feather name="chevron-right" size={18} color="#94A3B8" />
+                        </TouchableOpacity>
+                      ))
+                    )}
+                  </View>
+                </>
+              );
+            })()}
           </>
         )}
-
-        {/* Resources Section (Filtered by activeFilter) */}
-        {(() => {
-          const filteredResources = MOCK_RESOURCES.filter((res) => {
-            if (activeFilter === 'All') return true;
-            if (activeFilter === 'Notes') return res.type.includes('Notes') && !res.type.includes('Handwritten');
-            if (activeFilter === 'Handwritten') return res.type.includes('Handwritten') || res.title.toLowerCase().includes('handwritten');
-            if (activeFilter === 'Revision') return res.type.includes('Revision') || res.type.includes('Short');
-            return true;
-          });
-
-          const titleText = activeFilter === 'All'
-            ? 'Recently Opened Resources'
-            : `${activeFilter} Resources (${filteredResources.length})`;
-
-          return (
-            <>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>{titleText}</Text>
-              </View>
-
-              <View style={styles.resourcesList}>
-                {filteredResources.length === 0 ? (
-                  <View style={{ padding: 20, alignItems: 'center' }}>
-                    <Text style={{ color: '#64748B', fontSize: 13 }}>No {activeFilter} resources found.</Text>
-                  </View>
-                ) : (
-                  filteredResources.map((resource) => (
-                    <TouchableOpacity
-                      key={resource.id}
-                      activeOpacity={0.8}
-                      style={styles.resourceCard}
-                      onPress={() => router.push(`/notes/${resource.id}` as any)}
-                    >
-                      <View style={styles.resourceIconBox}>
-                        <Feather name="file-text" size={20} color="#EF4444" />
-                      </View>
-                      <View style={styles.resourceInfo}>
-                        <Text style={styles.resourceSubjectTag}>{resource.subjectCode} • {resource.type}</Text>
-                        <Text style={styles.resourceTitle}>{resource.title}</Text>
-                        <Text style={styles.resourceMetaText}>{resource.fileSize} • {resource.downloadsCount} downloads</Text>
-                      </View>
-                      <Feather name="chevron-right" size={18} color="#94A3B8" />
-                    </TouchableOpacity>
-                  ))
-                )}
-              </View>
-            </>
-          );
-        })()}
       </ScrollView>
     </View>
   );
@@ -524,6 +610,40 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: '#0745E8',
+  },
+  resourceHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 2,
+  },
+  listPaidBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    gap: 3,
+  },
+  listPaidBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#D97706',
+  },
+  listFreeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#D1FAE5',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    gap: 3,
+  },
+  listFreeBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#059669',
   },
   resourceTitle: {
     fontSize: 14,

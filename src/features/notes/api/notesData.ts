@@ -94,6 +94,9 @@ export const MOCK_RESOURCES: NoteResource[] = [
     isDownloaded: true,
     description: 'Comprehensive handwritten module notes covering HTTP, DNS, Socket Programming, and P2P Architecture.',
     totalPages: 32,
+    isPaid: true,
+    price: 29,
+    freePreviewPages: 2,
     tableOfContents: [
       '1. Network Edge & Core Architecture',
       '2. HTTP/1.1 vs HTTP/2 Mechanisms',

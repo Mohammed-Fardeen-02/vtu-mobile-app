@@ -41,8 +41,8 @@ export const SplashScreen: React.FC = () => {
         if (isAuthenticated) {
           router.replace('/(tabs)/home');
         } else {
-          // Navigate to 3-step onboarding info screen
-          router.replace('/(auth)/onboarding');
+          // Navigate unauthenticated user to welcome screen
+          router.replace('/(auth)/welcome');
         }
       }, 2000);
     };

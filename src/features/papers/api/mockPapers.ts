@@ -2,6 +2,85 @@ import { QuestionPaper } from '../types/paper.types';
 
 export const MOCK_PAPERS: QuestionPaper[] = [
   {
+    id: 'pyq-se-2025-reg',
+    subjectName: 'Software Engineering & Project Management',
+    subjectCode: '21CS51',
+    scheme: '2021',
+    branch: 'CSE',
+    semester: 5,
+    paperType: 'SEE_THEORY',
+    contentType: 'DIGITAL_TYPED',
+    hasSolutionKey: true,
+    year: '2025',
+    month: 'Jan/Feb',
+    maxMarks: 100,
+    durationHours: 3.0,
+    fileSize: '3.6 MB',
+    pageCount: 5,
+    viewsCount: 3890,
+    downloadsCount: 1420,
+    thumbnailBg: '#F3E8FF',
+    modules: [
+      {
+        moduleNumber: 1,
+        title: 'Module 1: Introduction to Software Engineering & Requirements',
+        mainQuestions: [
+          {
+            questionNumber: 'Q1',
+            choices: [
+              {
+                choiceId: 'Q1a',
+                subQuestions: [
+                  {
+                    subCode: 'a',
+                    text: 'Explain professional responsibility and software engineering ethics with suitable examples.',
+                    marks: 6,
+                    bloomLevel: 'L2',
+                    solution: 'Software engineers must adhere to ethics: Confidentiality, Competence, IP Rights, and avoiding system misuse.'
+                  },
+                  {
+                    subCode: 'b',
+                    text: 'Compare Waterfall model and Agile Software Development process models.',
+                    marks: 7,
+                    bloomLevel: 'L3',
+                    solution: 'Waterfall is sequential & phase-based. Agile focuses on incremental sprints, working software, and rapid iteration.'
+                  },
+                  {
+                    subCode: 'c',
+                    text: 'Define Functional and Non-Functional requirements for a Banking System.',
+                    marks: 7,
+                    bloomLevel: 'L1',
+                    solution: 'Functional: Money Transfer, Balance Inquiry. Non-Functional: 99.9% Uptime, <200ms latency.'
+                  }
+                ]
+              },
+              {
+                choiceId: 'Q1b',
+                isOrOption: true,
+                subQuestions: [
+                  {
+                    subCode: 'a',
+                    text: 'Elaborate Requirement Engineering Process activities with a neat block diagram.',
+                    marks: 10,
+                    bloomLevel: 'L2',
+                    solution: 'Activities: Inception, Elicitation, Analysis, SRS Specification, Validation, & Management.'
+                  },
+                  {
+                    subCode: 'b',
+                    text: 'Discuss Scrum Agile framework including Roles, Artifacts, and Ceremonies.',
+                    marks: 10,
+                    bloomLevel: 'L4',
+                    solution: 'Roles: Product Owner, Scrum Master, Dev Team. Artifacts: Product Backlog, Sprint Backlog. Ceremonies: Daily Standup, Review.'
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
     id: 'pyq-cn-2024-reg',
     subjectName: 'Computer Networks',
     subjectCode: '21CS52',
@@ -9,6 +88,8 @@ export const MOCK_PAPERS: QuestionPaper[] = [
     branch: 'CSE',
     semester: 5,
     paperType: 'Regular',
+    contentType: 'PDF_UPLOAD',
+    hasSolutionKey: false,
     year: '2024',
     month: 'Jan/Feb',
     fileSize: '2.4 MB',

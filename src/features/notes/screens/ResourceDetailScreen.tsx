@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,22 +6,47 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { Header } from '@/shared/components';
 import { MOCK_RESOURCES } from '../api/notesData';
+import { fetchNoteByIdFromApi } from '../api/notesApi';
+import { NoteResource } from '../types/notes.types';
 
 export const ResourceDetailScreen: React.FC = () => {
   const router = useRouter();
   const { id } = useLocalSearchParams();
 
-  const resource = MOCK_RESOURCES.find((r) => r.id === id) || MOCK_RESOURCES[0];
+  const [resource, setResource] = useState<NoteResource>(
+    () => MOCK_RESOURCES.find((r) => r.id === id) || MOCK_RESOURCES[0]
+  );
+  const [isLoading, setIsLoading] = useState(true);
 
   const [isBookmarked, setIsBookmarked] = useState(resource.isBookmarked);
   const [isDownloaded, setIsDownloaded] = useState(resource.isDownloaded);
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (id) {
+      fetchNoteByIdFromApi(id as string).then((res) => {
+        if (isMounted && res) {
+          setResource(res);
+          setIsBookmarked(res.isBookmarked);
+          setIsDownloaded(res.isDownloaded);
+        }
+        setIsLoading(false);
+      });
+    } else {
+      setIsLoading(false);
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [id]);
 
   const handleDownload = () => {
     if (isDownloaded) return;

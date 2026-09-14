@@ -10,13 +10,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { usePaperStore } from '../store/usePaperStore';
-import {
-  SCHEMES_LIST,
-  BRANCHES_LIST,
-  SEMESTERS_LIST,
-  YEARS_LIST,
-  PAPER_TYPES_LIST,
-} from '../api/mockPapers';
 import { useAuthStore } from '@/store';
 
 interface PaperFilterSheetProps {
@@ -29,7 +22,17 @@ export const PaperFilterSheet: React.FC<PaperFilterSheetProps> = ({
   onClose,
 }) => {
   const user = useAuthStore((state) => state.user);
-  const { activeFilters, setFilters, resetFilters, getFilteredPapers } = usePaperStore();
+  const {
+    activeFilters,
+    setFilters,
+    resetFilters,
+    getFilteredPapers,
+    schemesList,
+    branchesList,
+    semestersList,
+    yearsList,
+    paperTypesList,
+  } = usePaperStore();
 
   const filteredCount = getFilteredPapers().length;
 
@@ -102,26 +105,26 @@ export const PaperFilterSheet: React.FC<PaperFilterSheetProps> = ({
           <ScrollView style={styles.scrollBody} showsVerticalScrollIndicator={false}>
             {/* Paper Type Filter */}
             {renderSectionHeader('Paper Type', activeFilters.paperType)}
-            {renderChipGroup(PAPER_TYPES_LIST, activeFilters.paperType, (val) =>
+            {renderChipGroup(paperTypesList, activeFilters.paperType, (val) =>
               setFilters({ paperType: val })
             )}
 
             {/* Scheme Filter */}
             {renderSectionHeader('Curriculum Scheme', activeFilters.scheme)}
-            {renderChipGroup(SCHEMES_LIST, activeFilters.scheme, (val) =>
+            {renderChipGroup(schemesList, activeFilters.scheme, (val) =>
               setFilters({ scheme: val })
             )}
 
             {/* Branch Filter */}
             {renderSectionHeader('Engineering Branch', activeFilters.branch)}
-            {renderChipGroup(BRANCHES_LIST, activeFilters.branch, (val) =>
+            {renderChipGroup(branchesList, activeFilters.branch, (val) =>
               setFilters({ branch: val })
             )}
 
             {/* Semester Filter */}
             {renderSectionHeader('Semester', activeFilters.semester)}
             {renderChipGroup(
-              SEMESTERS_LIST,
+              semestersList,
               activeFilters.semester,
               (val) => setFilters({ semester: val }),
               'Sem '
@@ -129,7 +132,7 @@ export const PaperFilterSheet: React.FC<PaperFilterSheetProps> = ({
 
             {/* Exam Year Filter */}
             {renderSectionHeader('Exam Year', activeFilters.year)}
-            {renderChipGroup(YEARS_LIST, activeFilters.year, (val) =>
+            {renderChipGroup(yearsList, activeFilters.year, (val) =>
               setFilters({ year: val })
             )}
           </ScrollView>

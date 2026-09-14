@@ -17,18 +17,25 @@ import { useRouter } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Feather } from '@expo/vector-icons';
+import { performGoogleSignInSession } from '../utils/googleAuth';
 import { loginSchema, LoginFormData } from '../validation/auth.schema';
-import { useAuthStore } from '@/store';
+import { useAuth } from '../hooks/useAuth';
+import { useAuthStore } from '@/store/useAuthStore';
+import { useToast } from '@/core/providers/ToastProvider';
+import { ForgotPasswordModal } from '../components/ForgotPasswordModal';
 
 export const LoginScreen: React.FC = () => {
   const router = useRouter();
-  const setAuth = useAuthStore((state) => state.setAuth);
+  const { login, loginWithGoogle, error, isLoading, clearError } = useAuth();
+  const { showToast } = useToast();
+
   const [showPassword, setShowPassword] = useState(false);
+  const [forgotPasswordVisible, setForgotPasswordVisible] = useState(false);
 
   const {
     control,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -37,20 +44,41 @@ export const LoginScreen: React.FC = () => {
     },
   });
 
-  const onSubmit = (data: LoginFormData) => {
-    setAuth(
-      {
-        id: '1',
-        name: 'Fardeen',
-        email: data.email,
-        branch: 'CSE',
-        scheme: '2022',
-        semester: 5,
-      },
-      'mock_token_123'
-    );
-    router.replace('/(tabs)/home');
+  const onSubmit = async (data: LoginFormData) => {
+    clearError();
+    const ok = await login(data.email, data.password);
+    if (ok) {
+      const state = useAuthStore.getState();
+      const currentUser = state.user;
+      showToast(`Welcome back, ${currentUser?.name || 'Student'}!`, 'success');
+      if (state.isOnboarded || currentUser?.usn || currentUser?.branch || (currentUser as any)?.branchCode) {
+        router.replace('/(tabs)/home');
+      } else {
+        router.replace('/(auth)/onboarding');
+      }
+    } else {
+      const err = useAuthStore.getState().error || 'Login failed. Invalid credentials.';
+      showToast(err, 'error');
+    }
   };
+
+  const handleGoogleLogin = async () => {
+    clearError();
+    const { idToken, cancelled } = await performGoogleSignInSession();
+    if (cancelled || !idToken) return;
+
+    const ok = await loginWithGoogle(idToken);
+    if (ok) {
+      const state = useAuthStore.getState();
+      const currentUser = state.user;
+      if (state.isOnboarded || currentUser?.usn || currentUser?.branch || (currentUser as any)?.branchCode) {
+        router.replace('/(tabs)/home');
+      } else {
+        router.replace('/(auth)/onboarding');
+      }
+    }
+  };
+
 
   return (
     <View style={styles.rootContainer}>
@@ -98,6 +126,13 @@ export const LoginScreen: React.FC = () => {
           {/* Bottom Curved White Sheet Container */}
           <View style={styles.whiteSheet}>
             <View style={styles.formGroup}>
+              {/* Error Banner */}
+              {error ? (
+                <View style={{ backgroundColor: '#FEF2F2', borderColor: '#FCA5A5', borderWidth: 1, borderRadius: 12, padding: 12, marginBottom: 4 }}>
+                  <Text style={{ color: '#DC2626', fontSize: 13, fontWeight: '600', textAlign: 'center' }}>{error}</Text>
+                </View>
+              ) : null}
+
               {/* Email Field */}
               <View style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>Email Address</Text>
@@ -160,7 +195,7 @@ export const LoginScreen: React.FC = () => {
               <TouchableOpacity
                 activeOpacity={0.7}
                 style={styles.forgotPassWrapper}
-                onPress={() => {}}
+                onPress={() => setForgotPasswordVisible(true)}
               >
                 <Text style={styles.forgotPassText}>Forgot Password?</Text>
               </TouchableOpacity>
@@ -170,10 +205,10 @@ export const LoginScreen: React.FC = () => {
                 activeOpacity={0.85}
                 style={styles.loginButton}
                 onPress={handleSubmit(onSubmit)}
-                disabled={isSubmitting}
+                disabled={isLoading}
               >
                 <Text style={styles.loginButtonText}>
-                  {isSubmitting ? 'Signing In...' : 'Login'}
+                  {isLoading ? 'Signing In...' : 'Login'}
                 </Text>
               </TouchableOpacity>
 
@@ -188,11 +223,12 @@ export const LoginScreen: React.FC = () => {
               <TouchableOpacity
                 activeOpacity={0.85}
                 style={styles.googleButton}
-                onPress={() => onSubmit({ email: 'fardeen@vtu.ac.in', password: 'password123' })}
+                onPress={handleGoogleLogin}
               >
                 <Text style={styles.googleG}>G </Text>
                 <Text style={styles.googleText}>Continue with Google</Text>
               </TouchableOpacity>
+
 
               {/* Bottom Register Footer Link */}
               <View style={styles.footerRow}>
@@ -205,6 +241,11 @@ export const LoginScreen: React.FC = () => {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <ForgotPasswordModal
+        visible={forgotPasswordVisible}
+        onClose={() => setForgotPasswordVisible(false)}
+      />
     </View>
   );
 };

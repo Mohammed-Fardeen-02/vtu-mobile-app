@@ -47,4 +47,9 @@ export interface NoteResource {
   description: string;
   totalPages?: number;
   tableOfContents?: string[];
+  isPaid?: boolean;
+  price?: number;
+  freePreviewPages?: number;
+  isPurchased?: boolean;
+  fileUrl?: string;
 }

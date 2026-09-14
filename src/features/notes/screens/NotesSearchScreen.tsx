@@ -122,7 +122,20 @@ export const NotesSearchScreen: React.FC = () => {
                     <Feather name="file-text" size={20} color="#0745E8" />
                   </View>
                   <View style={styles.resultInfo}>
-                    <Text style={styles.resultTag}>{item.subjectCode} • {item.type}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
+                      <Text style={styles.resultTag}>{item.subjectCode} • {item.type}</Text>
+                      {item.isPaid ? (
+                        <View style={styles.listPaidBadge}>
+                          <Feather name="lock" size={10} color="#D97706" />
+                          <Text style={styles.listPaidBadgeText}>Paid • ₹{item.price || 19}</Text>
+                        </View>
+                      ) : (
+                        <View style={styles.listFreeBadge}>
+                          <Feather name="gift" size={10} color="#059669" />
+                          <Text style={styles.listFreeBadgeText}>Free</Text>
+                        </View>
+                      )}
+                    </View>
                     <Text style={styles.resultTitle}>{item.title}</Text>
                     <Text style={styles.resultSub}>{item.unitTitle} • {item.fileSize}</Text>
                   </View>
@@ -260,6 +273,34 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: '#0745E8',
+  },
+  listPaidBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    gap: 3,
+  },
+  listPaidBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#D97706',
+  },
+  listFreeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#D1FAE5',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    gap: 3,
+  },
+  listFreeBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#059669',
   },
   resultTitle: {
     fontSize: 14,

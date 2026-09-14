@@ -8,11 +8,13 @@ import { AcademicIdentityCard } from '../components/AcademicIdentityCard';
 import { SectionHeader } from '../components/SectionHeader';
 import { ProfileMenuRow } from '../components/ProfileMenuRow';
 import { AvatarUploadModal } from '../components/AvatarUploadModal';
+import { ChangePasswordModal } from '../components/ChangePasswordModal';
 
 export const ProfileHomeScreen: React.FC = () => {
   const router = useRouter();
   const { user, logout } = useAuthStore();
   const [avatarModalVisible, setAvatarModalVisible] = useState(false);
+  const [changePasswordVisible, setChangePasswordVisible] = useState(false);
 
   if (!user) return null;
 
@@ -124,6 +126,14 @@ export const ProfileHomeScreen: React.FC = () => {
           onPress={() => router.push('/profile/about' as any)}
         />
         <ProfileMenuRow
+          title="Security & Change Password"
+          subtitle="Update account password & security options"
+          iconName="lock"
+          iconBg="#EEF2FF"
+          iconColor="#0745E8"
+          onPress={() => setChangePasswordVisible(true)}
+        />
+        <ProfileMenuRow
           title="Sign Out of Account"
           subtitle="Log out from VTU Student Super App"
           iconName="log-out"
@@ -137,6 +147,12 @@ export const ProfileHomeScreen: React.FC = () => {
       <AvatarUploadModal
         visible={avatarModalVisible}
         onClose={() => setAvatarModalVisible(false)}
+      />
+
+      {/* Change Password Modal */}
+      <ChangePasswordModal
+        visible={changePasswordVisible}
+        onClose={() => setChangePasswordVisible(false)}
       />
     </View>
   );
