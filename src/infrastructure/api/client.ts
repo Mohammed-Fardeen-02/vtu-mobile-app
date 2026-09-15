@@ -22,7 +22,7 @@ const getBaseUrl = () => {
   }
 
   // 3. Default fallback LAN IP for local backend
-  return 'http://192.168.31.11:5000/api/v1';
+  return 'http://10.102.96.173:5000/api/v1';
 };
 
 export const apiClient = axios.create({
